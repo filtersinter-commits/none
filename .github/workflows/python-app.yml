@@ -2,10 +2,7 @@ name: Generate and Release DNS Blocklist
 
 on:
   push:
-    branches: [ "main" ]
-  # 移除了 pull_request 触发器，因为通常不会从 PR 创建 Release。
-
-# 必须将权限设置为 write 才能创建 Release 和上传文件
+    branches: ["main"]
 permissions:
   contents: write
 
@@ -13,76 +10,43 @@ jobs:
   generate_and_upload:
     name: Generate File and Upload Artifact
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.10"
-
-    - name: Install dependencies
-      # 保持了您原有的依赖安装逻辑，但去掉了 flake8 和 pytest 的全局安装
-      run: |
-        python -m pip install --upgrade pip
-        # 安装 run.py 所需的依赖
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        
-    # --- 新增步骤：运行您的 Python 脚本 ---
-    - name: Run Python script to generate 'dns_blocker_urls.txt'
-      # 运行 run.py，它应该在当前目录下生成 dns_blocker_urls.txt
-      run: python run.py
-      
-    # --- 新增步骤：上传生成的文件作为工作流 Artifact ---
-    - name: Upload generated file as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: dns-blocker-artifact
-        path: dns_blocker_urls.txt
-        # 设置保留期限，可选
-        retention-days: 7 
-        
-    # 您的原有 Lint 和 Test 步骤可以放在此处，例如:
-    # - name: Lint with flake8
-    #   run: |
-    #     pip install flake8
-    #     flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    # - name: Test with pytest
-    #   run: |
-    #     pip install pytest
-    #     pytest
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Run Python script to generate 'dns_blocker_urls.txt'
+        run: python run.py
+      - name: Upload generated file as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dns-blocker-artifact
+          path: dns_blocker_urls.txt
+          retention-days: 7
 
   create_release:
     name: Create GitHub Release
-    # 确保此 Job 在文件生成 Job 成功后才运行
     needs: generate_and_upload
-    # 仅在 main 分支的 push 事件中运行此 Job
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-
     steps:
-    # --- 步骤 1: 下载生成的文件 Artifact ---
-    - name: Download generated file artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: dns-blocker-artifact
-
-    # --- 步骤 2: 创建 Release 并上传文件作为 Asset ---
-    - name: Create Release and Upload Asset
-      uses: softprops/action-gh-release@v1
-      env:
-        # 使用 GitHub 自动提供的 token
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
-      with:
-        # 每次提交都创建一个新的 Release tag，使用 commit SHA 保证唯一性
-        tag_name: "build-${{ github.sha }}"
-        name: "DNS Blocklist Update"
-        body: "自动生成的 DNS 阻止列表。Commit: ${{ github.sha }}"
-        
-        # 将 Release 设置为草稿 (draft: true)，方便您手动审核后再发布
-        draft: true
-        
-        # 指定要上传到 Release 的文件路径
-        files: dns_blocker_urls.txt
+      - name: Download generated file artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dns-blocker-artifact
+      - name: Create Release and Upload Asset
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: "build-${{ github.sha }}"
+          name: "DNS Blocklist Update"
+          body: "自动生成的 DNS 阻止列表。Commit: ${{ github.sha }}"
+          draft: true
+          files: dns_blocker_urls.txt
