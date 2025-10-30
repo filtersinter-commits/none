@@ -27,7 +27,8 @@ for url in url_lists:
     if sld and tld:
         dns_blocker_urls.add(f"{sld}.{tld}")
 
-os.remove('./dns_blocker_urls.txt') if os.path.exists('./dns_blocker_urls.txt') else None
+os.remove('./dns_blocker_urls.txt') if \
+    os.path.exists('./dns_blocker_urls.txt') else None
 
 with open('./dns_blocker_urls.txt', 'w') as f:
     for i in dns_blocker_urls:
