@@ -48,5 +48,5 @@ jobs:
           tag_name: "build-${{ github.sha }}"
           name: "DNS Blocklist Update"
           body: "自动生成的 DNS 阻止列表。Commit: ${{ github.sha }}"
-          draft: true
+          draft: false
           files: dns_blocker_urls.txt
